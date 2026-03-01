@@ -1,0 +1,205 @@
+name: Build & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: altaychat-linux
+            binary: build/Release/altaychat
+            upload_path: build/Release/altaychat
+            triplet: x64-linux-static
+          - os: macos-latest
+            artifact: altaychat-macos
+            binary: build/Release/altaychat
+            upload_path: build/Release/altaychat
+            triplet: arm64-osx-static
+          - os: windows-latest
+            artifact: altaychat-windows
+            binary: build/Release/altaychat.exe
+            upload_path: build/Release/altaychat.exe
+            triplet: x64-windows-static
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: build/vcpkg_installed
+          key: vcpkg-${{ matrix.os }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ matrix.os }}-${{ matrix.triplet }}-
+
+      - name: Install Linux Kernel Headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y linux-libc-dev
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        env:
+          VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/build/vcpkg_installed,readwrite"
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+
+      - name: Build with CMake (Linux / macOS)
+        if: runner.os != 'Windows'
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: ninja-multi-vcpkg
+          buildPreset: ninja-multi-vcpkg
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+          VCPKG_TARGET_TRIPLET: ${{ matrix.triplet }}
+
+      - name: Build with CMake (Windows - static)
+        if: runner.os == 'Windows'
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: ninja-multi-vcpkg
+          buildPreset: ninja-multi-vcpkg
+          configurePresetAdditionalArgs: "['-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded', '-DVCPKG_TARGET_TRIPLET=x64-windows-static']"
+        env:
+          VCPKG_DEFAULT_TRIPLET: x64-windows-static
+          VCPKG_TARGET_TRIPLET: x64-windows-static
+
+      - name: Strip binary (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: strip ${{ matrix.binary }}
+
+      - name: Rename binary for release (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: mv ${{ matrix.binary }} build/Release/${{ matrix.artifact }}
+
+      - name: Rename binary for release (Windows)
+        if: runner.os == 'Windows'
+        run: mv ${{ matrix.binary }} build/Release/${{ matrix.artifact }}.exe
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            build/Release/${{ matrix.artifact }}
+            build/Release/${{ matrix.artifact }}.exe
+          if-no-files-found: error
+
+  check-portability:
+    name: Check Portability (${{ matrix.os }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: altaychat-linux
+            binary: altaychat-linux
+          - os: macos-latest
+            artifact: altaychat-macos
+            binary: altaychat-macos
+          - os: windows-latest
+            artifact: altaychat-windows
+            binary: altaychat-windows.exe
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ./check_dir
+
+      - name: Check dependencies & run binary (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ./check_dir
+        run: |
+          chmod +x ${{ matrix.binary }}
+          echo "=== Shared library dependencies ==="
+          ldd ./${{ matrix.binary }}
+          echo "=== Binary smoke test ==="
+          ./${{ matrix.binary }} --smoke-test
+
+      - name: Check dependencies & run binary (macOS)
+        if: runner.os == 'macOS'
+        working-directory: ./check_dir
+        run: |
+          chmod +x ${{ matrix.binary }}
+          echo "=== Dynamic library dependencies ==="
+          otool -L ./${{ matrix.binary }}
+          echo "=== Binary smoke test ==="
+          ./${{ matrix.binary }} --smoke-test
+
+      - name: Check dependencies & run binary (Windows)
+        if: runner.os == 'Windows'
+        working-directory: ./check_dir
+        shell: pwsh
+        run: |
+          Write-Host "=== Files in artifact ==="
+          Get-ChildItem -Path .
+          Write-Host "=== Binary smoke test ==="
+          .\${{ matrix.binary }} --smoke-test
+
+  release:
+    name: Create GitHub Release
+    needs: check-portability
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Compress assets
+        run: |
+          # Linux
+          cd artifacts/altaychat-linux
+          chmod +x altaychat-linux
+          zip -r -9 ../../altaychat-linux.zip altaychat-linux
+          cd ../..
+
+          # macOS
+          cd artifacts/altaychat-macos
+          chmod +x altaychat-macos
+          zip -r -9 ../../altaychat-macos.zip altaychat-macos
+          cd ../..
+
+          # Windows
+          cd artifacts/altaychat-windows
+          zip -r -9 ../../altaychat-windows.zip altaychat-windows.exe
+          cd ../..
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./altaychat-linux.zip
+            ./altaychat-macos.zip
+            ./altaychat-windows.zip
+          name: "AltayChat ${{ github.ref_name }}"
+          body: |
+            ## 🚀 AltayChat ${{ github.ref_name }} - Secure P2P Audio
+            
+            ### 📦 Portable Binaries
+            Download the compressed archive for your operating system:
+            - **Linux:** Extract `altaychat-linux.zip` and run the `altaychat-linux` executable.
+            - **macOS:** Extract `altaychat-macos.zip` and run the `altaychat-macos` executable.
+            - **Windows:** Extract `altaychat-windows.zip` and run `altaychat-windows.exe`.
+
+            ---
+            *Built with ❤️ for privacy and low-latency communication.*
+          tag_name: ${{ github.ref }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
