@@ -30,13 +30,23 @@ void WebRTCManager::initialize(const std::string& turn_username, const std::stri
 
     Configuration config;
     config.disableAutoNegotiation = true;
+    // STUN Servers (Standard + DNS Bypass)
     config.iceServers.emplace_back("stun:stun.cloudflare.com:3478");
+    config.iceServers.emplace_back("stun:stun.cloudflare.com:53");
 
     if (!turn_username.empty() && !turn_password.empty()) {
         std::cout << "[WebRTC] Using TURN credentials from configuration.\n";
+        
+        // Standard TURN/TURNS Ports
         config.iceServers.emplace_back("turn.cloudflare.com", 3478, turn_username, turn_password, IceServer::RelayType::TurnUdp);
         config.iceServers.emplace_back("turn.cloudflare.com", 3478, turn_username, turn_password, IceServer::RelayType::TurnTcp);
         config.iceServers.emplace_back("turn.cloudflare.com", 5349, turn_username, turn_password, IceServer::RelayType::TurnTls);
+        
+        // Firewall Bypass Ports (Cloudflare extra routes)
+        config.iceServers.emplace_back("turn.cloudflare.com", 53, turn_username, turn_password, IceServer::RelayType::TurnUdp);
+        config.iceServers.emplace_back("turn.cloudflare.com", 80, turn_username, turn_password, IceServer::RelayType::TurnTcp);
+        config.iceServers.emplace_back("turn.cloudflare.com", 443, turn_username, turn_password, IceServer::RelayType::TurnTls);
+        
         config.iceTransportPolicy = TransportPolicy::Relay;
     } else {
         std::cout << "[WebRTC] No TURN credentials found - STUN-only mode (direct connections only).\n"
