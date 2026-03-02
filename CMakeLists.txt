@@ -56,7 +56,7 @@ add_executable(altaychat
 )
 
 # Define version
-target_compile_definitions(altaychat PRIVATE ALTAYCHAT_VERSION=\"v0.3\")
+target_compile_definitions(altaychat PRIVATE ALTAYCHAT_VERSION=\"v0.4\")
 
 target_include_directories(altaychat PRIVATE
     src
