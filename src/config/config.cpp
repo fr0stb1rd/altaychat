@@ -5,7 +5,7 @@
 
 AppConfig AppConfig::load() {
     AppConfig config;
-    config.signaling_url = "wss://your-worker.your-subdomain.workers.dev"; // Default
+    config.signaling_url = "wss://altaychat.xte.workers.dev"; // Default
 
     // 1. Configuration File
     std::ifstream f("altaychat.conf");
@@ -39,8 +39,8 @@ AppConfig AppConfig::load() {
     }
 
     // 3. Fallback Warning
-    if (config.signaling_url == "wss://your-worker.your-subdomain.workers.dev") {
-        std::cout << "[Warning] Using placeholder signaling URL. Please configure your own signaling server in altaychat.conf or via ALTAYCHAT_SIGNALING_URL.\n";
+    if (config.signaling_url == "wss://altaychat.xte.workers.dev") {
+        std::cout << "[Warning] Using default signaling URL. Please configure your own signaling server in altaychat.conf or via ALTAYCHAT_SIGNALING_URL.\n";
     }
 
     return config;

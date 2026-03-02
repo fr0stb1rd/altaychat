@@ -124,7 +124,7 @@ The app requires a signaling server URL to connect peers. You can set this URL i
    ```bash
    export ALTAYCHAT_SIGNALING_URL=wss://your-signaling-server.com
    ```
-3. **Default Fallback:** If neither is provided, the app will fall back to a placeholder URL (`wss://your-worker.your-subdomain.workers.dev`) and display a console warning.
+3. **Default Fallback:** If neither is provided, the app will use default signaling server.
 
 ---
 
