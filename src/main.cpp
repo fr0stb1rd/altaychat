@@ -264,7 +264,6 @@ private:
 };
 
 int main(int argc, char **argv) {
-    AppConfig app_config = AppConfig::load();
     // Register signal handlers for robust shutdown
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
@@ -310,6 +309,8 @@ int main(int argc, char **argv) {
     // 3. Now print the banner with the identified backend
     std::cout << "AltayChat - WebRTC P2P Audio\n";
     print_banner_info(debug_mode, audio_backend);
+
+    AppConfig app_config = AppConfig::load();
 
     // 4. Proceed with Room ID and Stream opening
     std::string room_id;
