@@ -73,26 +73,26 @@ target_link_libraries(altaychat PRIVATE
 
 # Windows-specific settings
 if(WIN32)
-    # Temel Windows kütüphaneleri
+    # Basic Windows libraries
     target_link_libraries(altaychat PRIVATE ws2_32 winmm)
 
     if(MSVC AND CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "^MultiThreaded")
-        # Find_package ile OpenSSL'i bulalım (vcpkg zaten bulmuş olmalı ama garantiye alıyoruz)
+        # Find OpenSSL (vcpkg should have found it already, but just to be sure)
         find_package(OpenSSL REQUIRED)
         
-        # applink.c'nin yerini manuel tespit edelim
+        # Manually locate applink.c
         find_path(OPENSSL_APPLINK_DIR openssl/applink.c
             PATHS ${OPENSSL_INCLUDE_DIR}
             NO_DEFAULT_PATH
         )
 
         if(OPENSSL_APPLINK_DIR)
-            # Dosyayı bulduysak ekleyelim
+            # Add the file if found
             target_sources(altaychat PRIVATE "${OPENSSL_APPLINK_DIR}/openssl/applink.c")
         else()
-            # Eğer vcpkg klasöründe yoksa, vcpkg'nin statik portu bazen kopyalamıyor olabilir.
-            # Bu durumda hata vermemesi için uyarı verelim.
-            message(WARNING "OpenSSL applink.c bulunamadı! Eğer runtime crash alırsanız bu dosyayı manuel ekleyin.")
+            # If missing in the vcpkg folder, vcpkg's static port might not have copied it.
+            # Print a warning instead of failing.
+            message(WARNING "OpenSSL applink.c not found! If you get a runtime crash, add this file manually.")
         endif()
     endif()
 endif()

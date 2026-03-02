@@ -20,7 +20,7 @@ namespace rtp {
 }
 
 static std::tuple<std::string, std::string, TurnSource> load_turn_credentials() {
-    // 1. turnconfig dosyası
+    // 1. turnconfig file
     std::ifstream f("turnconfig");
     if (f) {
         std::string line, user, pass;
@@ -31,12 +31,12 @@ static std::tuple<std::string, std::string, TurnSource> load_turn_credentials() 
         if (!user.empty() && !pass.empty())
             return {user, pass, TurnSource::File};
     }
-    // 2. Env var
+    // 2. Environment variables
     const char* u = std::getenv("TURN_USERNAME");
     const char* p = std::getenv("TURN_PASSWORD");
     if (u && p && u[0] && p[0])
         return {u, p, TurnSource::Env};
-    // 3. Yok
+    // 3. None - Fallback
     return {"", "", TurnSource::None};
 }
 
