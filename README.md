@@ -98,17 +98,33 @@ cmake --build build --config Release
 
 By default, AltayChat tries to connect directly. For better connectivity and privacy, you can use **TURN** servers.
 
-1. Create a file named `turnconfig` in the same folder as the app.
+1. Create or open the `altaychat.conf` file in the same folder as the app.
 2. Add your credentials:
 ```ini
-username=your_username
-password=your_password
+ALTAYCHAT_TURN_USERNAME=your_username
+ALTAYCHAT_TURN_PASSWORD=your_password
 
 ```
 
 
 
-*Alternatively, you can set `TURN_USERNAME` and `TURN_PASSWORD` environment variables.*
+*Alternatively, you can set `ALTAYCHAT_TURN_USERNAME` and `ALTAYCHAT_TURN_PASSWORD` environment variables.*
+
+---
+
+## ⚙️ Signaling Server Configuration
+
+The app requires a signaling server URL to connect peers. You can set this URL in one of three ways:
+
+1. **Configuration File (Recommended):** Create a file named `altaychat.conf` in the same directory as the executable and add your URL:
+   ```ini
+   SIGNALING_URL=wss://your-signaling-server.com
+   ```
+2. **Environment Variable:** Export the `ALTAYCHAT_SIGNALING_URL` environment variable:
+   ```bash
+   export ALTAYCHAT_SIGNALING_URL=wss://your-signaling-server.com
+   ```
+3. **Default Fallback:** If neither is provided, the app will fall back to a placeholder URL (`wss://your-worker.your-subdomain.workers.dev`) and display a console warning.
 
 ---
 

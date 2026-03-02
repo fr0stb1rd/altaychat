@@ -11,7 +11,7 @@ public:
     WebRTCManager();
     ~WebRTCManager();
 
-    void initialize();
+    void initialize(const std::string& turn_username, const std::string& turn_password);
     
     // Remote actions triggered by signaling
     void set_role(const std::string& role);

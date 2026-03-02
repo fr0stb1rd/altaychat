@@ -11,7 +11,8 @@
 #include <atomic>
 #include <queue>
 #include <functional>
-
+#include <fstream>
+#include <cstdlib>
 #if defined(_WIN32)
 #include <io.h>
 #include <fcntl.h>
@@ -41,6 +42,7 @@
 #include "audio/audio_context.hpp"
 #include "signaling/signaling_client.hpp"
 #include "webrtc/webrtc_manager.hpp"
+#include "config/config.hpp"
 
 #ifndef ALTAYCHAT_VERSION
 #define ALTAYCHAT_VERSION "unknown"
@@ -262,6 +264,7 @@ private:
 };
 
 int main(int argc, char **argv) {
+    AppConfig app_config = AppConfig::load();
     // Register signal handlers for robust shutdown
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
@@ -312,7 +315,12 @@ int main(int argc, char **argv) {
     std::string room_id;
     std::cout << "[Info] Enter room name (e.g. test1, room123): ";
     std::cin >> room_id;
-    std::string ws_url = "wss://altaychat.xte.workers.dev/" + room_id;
+
+    std::string base_ws_url = app_config.signaling_url;
+    if (!base_ws_url.empty() && base_ws_url.back() != '/') {
+        base_ws_url += "/";
+    }
+    std::string ws_url = base_ws_url + room_id;
 
     rtc::InitLogger(debug_mode ? rtc::LogLevel::Debug : rtc::LogLevel::Error);
     
@@ -365,14 +373,14 @@ int main(int argc, char **argv) {
 
     signaling.on_peer_joined = [&]() {
         signaling_queue.push([&]() {
-            webrtc.initialize();
+            webrtc.initialize(app_config.turn_username, app_config.turn_password);
             webrtc.create_offer();
         });
     };
 
     signaling.on_offer = [&](const std::string& sdp, const std::string& type) {
         signaling_queue.push([&, sdp, type]() {
-            webrtc.initialize();
+            webrtc.initialize(app_config.turn_username, app_config.turn_password);
             webrtc.handle_offer(sdp, type);
         });
     };

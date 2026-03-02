@@ -49,6 +49,7 @@ endif()
 
 add_executable(altaychat 
     src/main.cpp
+    src/config/config.cpp
     src/audio/audio_callback.cpp
     src/signaling/signaling_client.cpp
     src/webrtc/webrtc_manager.cpp

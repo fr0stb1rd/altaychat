@@ -19,55 +19,28 @@ namespace rtp {
     constexpr size_t EXT_HEADER_SIZE = 4;
 }
 
-static std::tuple<std::string, std::string, TurnSource> load_turn_credentials() {
-    // 1. turnconfig file
-    std::ifstream f("turnconfig");
-    if (f) {
-        std::string line, user, pass;
-        while (std::getline(f, line)) {
-            if (line.rfind("username=", 0) == 0) user = line.substr(9);
-            if (line.rfind("password=", 0) == 0) pass = line.substr(9);
-        }
-        if (!user.empty() && !pass.empty())
-            return {user, pass, TurnSource::File};
-    }
-    // 2. Environment variables
-    const char* u = std::getenv("TURN_USERNAME");
-    const char* p = std::getenv("TURN_PASSWORD");
-    if (u && p && u[0] && p[0])
-        return {u, p, TurnSource::Env};
-    // 3. None - Fallback
-    return {"", "", TurnSource::None};
-}
-
 WebRTCManager::WebRTCManager() {}
 
 WebRTCManager::~WebRTCManager() {
     close();
 }
 
-void WebRTCManager::initialize() {
+void WebRTCManager::initialize(const std::string& turn_username, const std::string& turn_password) {
     reset(); // Idempotent: safe for reconnects
 
     Configuration config;
     config.disableAutoNegotiation = true;
     config.iceServers.emplace_back("stun:stun.cloudflare.com:3478");
 
-    auto [turn_user, turn_pass, turn_source] = load_turn_credentials();
-
-    if (turn_source != TurnSource::None) {
-        if (turn_source == TurnSource::File)
-            std::cout << "[WebRTC] TURN credentials loaded from turnconfig file.\n";
-        else if (turn_source == TurnSource::Env)
-            std::cout << "[WebRTC] TURN credentials loaded from environment variables.\n";
-
-        config.iceServers.emplace_back("turn.cloudflare.com", 3478, turn_user, turn_pass, IceServer::RelayType::TurnUdp);
-        config.iceServers.emplace_back("turn.cloudflare.com", 3478, turn_user, turn_pass, IceServer::RelayType::TurnTcp);
-        config.iceServers.emplace_back("turn.cloudflare.com", 5349, turn_user, turn_pass, IceServer::RelayType::TurnTls);
+    if (!turn_username.empty() && !turn_password.empty()) {
+        std::cout << "[WebRTC] Using TURN credentials from configuration.\n";
+        config.iceServers.emplace_back("turn.cloudflare.com", 3478, turn_username, turn_password, IceServer::RelayType::TurnUdp);
+        config.iceServers.emplace_back("turn.cloudflare.com", 3478, turn_username, turn_password, IceServer::RelayType::TurnTcp);
+        config.iceServers.emplace_back("turn.cloudflare.com", 5349, turn_username, turn_password, IceServer::RelayType::TurnTls);
         config.iceTransportPolicy = TransportPolicy::Relay;
     } else {
         std::cout << "[WebRTC] No TURN credentials found - STUN-only mode (direct connections only).\n"
-                  << "[WebRTC] Hint: create a 'turnconfig' file or set TURN_USERNAME/TURN_PASSWORD.\n";
+                  << "[WebRTC] Hint: add them to 'altaychat.conf' or set ALTAYCHAT_TURN_USERNAME/ALTAYCHAT_TURN_PASSWORD.\n";
         config.iceTransportPolicy = TransportPolicy::All;
     }
     

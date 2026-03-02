@@ -44,9 +44,9 @@ node_modules
 build
 server/iceservers.txt
 portaudio-master
-turnconfig
 repomix-output.xml
 CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
 Makefile
+altaychat.conf
