@@ -12,6 +12,7 @@
 * **High-Quality Audio:** Powered by the **Opus codec** (48kHz Mono) for crystal clear sound even on slow connections.
 * **Security:** Uses **DTLS-SRTP** for end-to-end encryption.
 * **Privacy:** Supports **Cloudflare TURN** relay to hide your IP address and bypass strict firewalls.
+* **Firewall & DPI Bypass:** Uses Cloudflare TURN fallback ports (53 DNS, 80 HTTP, 443 HTTPS/TLS) to traverse strict corporate networks and Symmetric NATs seamlessly.
 * **Low Latency:** Uses lock-free buffers and event-driven threads for real-time performance.
 * **Automated Signaling:** No need to copy-paste long SDP strings; a lightweight signaling server handles the handshake.
 
@@ -126,13 +127,16 @@ The app requires a signaling server URL to connect peers. You can set this URL i
    ```
 3. **Default Fallback:** If neither is provided, the app will use default signaling server.
 
+> **🔒 Security Note:** The default public signaling server only routes connection data (SDP and ICE candidates). It **cannot** access or eavesdrop on your audio. All media is strictly Peer-to-Peer and End-to-End Encrypted (E2EE) using DTLS-SRTP.
+
 ---
 
 ## 🏗️ Project Structure
 
 * `src/audio/`: Handles raw audio capture and playback using PortAudio.
-* `src/webrtc/`: Manages P2P connection, ICE gathering, and RTP packets.
+* `src/config/`: Centralized configuration manager for parsing files and environment variables.
 * `src/signaling/`: Communicates with the Cloudflare Worker to find peers.
+* `src/webrtc/`: Manages P2P connection, ICE gathering, and RTP packets.
 * `server/`: Source code for the Cloudflare Worker signaling server.
 
 ---
